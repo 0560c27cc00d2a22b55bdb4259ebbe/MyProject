@@ -1,0 +1,153 @@
+<center> 批量获取竞品 App 订单数据 </center>
+----
+#### 实现思路
+找到目标 App`刷新订单`以及 App`解析订单数据`的方法，然后通过轮询的方式，将获取的数据通过网络请求上传到本地服务器
+#### 操作步骤
+1. 先对目标 App 进行砸壳等操作
+2. 使用 `Charles` 抓包获取其网络请求
+3. 使用 `Cycript` 获取展示订单的控制器及刷新订单的方法
+4. 使用 `logify` 查看方法调用次序
+5. 使用 `hopper` 对所获取的方法进行分析
+
+#### 逻辑串联 
+1. 通过 `Cycript` 看到目标 App 订单列表控制器，以及刷新按钮绑定的方法
+2. App 进入前台、页面切换自动刷新订单列表或点击刷新按钮，通过`Charles`查看订单列表链接及订单详情链接
+3. 找到 App 所展示订单的 `TableView` 的 `dataSource`
+4. 对所找到的 `model` 使用 `logify` 分析接收数据的方法或属性
+
+#### Tweak 编写
+###### 定时器
+
+```
+%new
+- (void)createCircleTimer
+{
+	NSThread *thread = [[NSThread alloc] initWithTarget:self selector:@selector(newThread) object:nil];
+    [thread start];
+}
+%new
+- (void)newThread
+{
+	@autoreleasepool
+    {
+        //在当前Run Loop中添加timer，模式是默认的NSDefaultRunLoopMode
+        [NSTimer scheduledTimerWithTimeInterval:120.0 target:self selector:@selector(timer_callback) userInfo:nil repeats:YES];
+        //开始执行新线程的Run Loop
+        [[NSRunLoop currentRunLoop] run];
+    }
+}
+
+%new
+- (void)timer_callback
+{
+	[self refreshOrderList];
+}
+```
+
+###### 创建 txt 文件夹
+
+```
+%new
+- (void)createDocumnet
+{
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    if (paths.count > 0)
+    {
+    	NSString *documentsDirectory = [paths objectAtIndex:0];
+	   	NSString *testDirectory = [documentsDirectory stringByAppendingPathComponent:@"DadaFile"];
+	    NSFileManager *fileManager = [NSFileManager defaultManager];
+	    BOOL isDir = NO;
+	    BOOL isDirExist = [fileManager fileExistsAtPath:testDirectory isDirectory:&isDir];
+	    if (!(isDirExist && isDir))
+	    {
+	        [fileManager createDirectoryAtPath:testDirectory withIntermediateDirectories:YES attributes:nil error:nil];
+	    }
+    }
+}
+```
+###### 数据写入
+
+```
+%new
+// MARK: 数据缓存
+- (void)writeFile:(NSString *)logString
+{
+	if (![[self getDocument] isEqualToString:@""])
+    {
+		if ([self getFilesCount] > 0)
+		{
+			NSArray *array = [[NSFileManager defaultManager] subpathsAtPath:[self getDocument]];
+			if (array.count > 0)
+			{
+				NSString *filePath = [NSString stringWithFormat:@"%@/%@", [self getDocument], array[0]];
+				if ([[NSFileManager defaultManager] fileExistsAtPath:filePath])
+			    {
+			        NSFileHandle  *outFile = [NSFileHandle fileHandleForWritingAtPath:filePath];
+			        NSData 		  *buffer  = [logString dataUsingEncoding:NSUTF8StringEncoding];
+			        [outFile seekToEndOfFile];
+			        [outFile writeData:buffer];
+			        [outFile closeFile];
+			    }
+			    else
+			    {
+			        [[NSFileManager defaultManager] createFileAtPath:filePath
+			                                                contents:[logString dataUsingEncoding:NSUTF8StringEncoding]
+			                                              attributes:nil];
+			    }
+			}	
+		}
+		else
+		{
+			NSString *filePath = [[self getDocument] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@",[self get_CurrentTime]]];
+			[[NSFileManager defaultManager] createFileAtPath:filePath
+	                                                contents:[logString dataUsingEncoding:NSUTF8StringEncoding]
+	                                              attributes:nil];
+		}
+	}
+}
+%new
+- (NSString *)getDocument
+{
+   	NSArray *array = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+	if (array.count > 0)
+	{
+		NSString *documentsDirectory 	= [array objectAtIndex:0];
+	   	NSString *testDirectory 		= [documentsDirectory stringByAppendingPathComponent:@"DadaFile"];
+	    return testDirectory;
+	}
+	return @"";
+}
+%new
+- (NSInteger)getFilesCount
+{
+	NSArray *array = [[NSFileManager defaultManager] subpathsAtPath:[self getDocument]];
+    return array.count;
+}
+```
+###### txt 文件上传
+
+```
+%new
+- (void)uploadFileWithUrlString:(NSString *)urlString fieldName:(NSString *)fieldName fileName:(NSString *)fileName fileData:(NSData *)fileData
+{
+    NSURL *url = [NSURL URLWithString:urlString];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+    request.HTTPMethod = @"POST";
+    request.timeoutInterval = 15.0;//设置请求超时
+    request.HTTPBody = [self formData:fieldName fileName:fileName fileData:fileData];
+    NSString *typeValue = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", @"just-try"];
+    [request setValue:typeValue forHTTPHeaderField:@"Content-Type"];
+
+    NSURLSession *session=[NSURLSession sharedSession];
+    NSURLSessionDataTask *dataTask=[session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        id result = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        NSLog(@"post==%@",result);
+        // MARK: 删除文件
+        [self deleteAllFiles];
+        [self createDocumnet];
+    }];
+    [dataTask resume];
+}
+```
+
+这样 App 做一些变动时，我们代码的逻辑变动不会很大。。。
