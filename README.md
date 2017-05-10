@@ -1,2 +1,0 @@
-# MyProject
-Just try
