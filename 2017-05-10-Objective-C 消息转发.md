@@ -184,7 +184,7 @@ id  c_objc_msgSend( struct mulle_nsobject *self, SEL _cmd, ...)
 跳转执行`_objc_msgSend_uncached_impcache`(跳转到`_class_lookupMethodAndLoadCache3`由汇编语言的实现回到了 C 函数的实现），这个函数只是简单的调用了另外一个函数`lookUpImpOrForward`。
 > 关于`lookUpImpOrForward`这里讲的很[详细](http://draveness.me/message.html)
 
-#### 需求还可以用反射方式实现：
+#### 需求还可以用这种简单快捷的实现：
 
 ```
 Class class = NSClassFromString(@"TryViewController");
