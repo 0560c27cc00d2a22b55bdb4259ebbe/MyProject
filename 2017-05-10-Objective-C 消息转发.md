@@ -21,7 +21,7 @@ Method *methods = class_copyMethodList(LenderClass, &outCount);
 
 for(unsigned int i = 0; i < outCount; ++i)
 {
-	// 获取方法名称字符串
+    // 获取方法名称字符串
     Method method = methods[i];
     SEL methodName = method_getName(method);
     NSString *nameString = NSStringFromSelector(methodName);
