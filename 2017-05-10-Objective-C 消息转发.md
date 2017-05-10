@@ -197,7 +197,7 @@ if ([clang respondsToSelector:@selector(clickButtonAction:)])
 ```
 `performSelector: withObject:`可以向一个对象传递任何消息，而不需要在编译的时候声明这些方法。`performSelector`只是一个执行动作，底层执行的仍旧是`objc_msgSend` (当`selector`不存在时编译器会直接崩溃)。
 > the method `-respondsToSelector:` is not called by the runtime, it's usually called by the user (yourself or APIs that want to know if a delegate, for example, responds to an optional method of the protocol)  
-[这是对`respondsToSelector`与`performSelector`的详细解读](http://stackoverflow.com/questions/4574465/objective-c-respondstoselector)
+[详细解读](http://stackoverflow.com/questions/4574465/objective-c-respondstoselector)
 
 系统Foundation框架为我们提供了一些方法反射的API，我们可以通过这些API执行将字符串转为SEL等操作：
 ```
