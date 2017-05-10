@@ -36,6 +36,7 @@ for(unsigned int i = 0; i < outCount; ++i)
 ```
 #### 方法解读
 Objective-C 是一个动态语言，这意味着它不仅需要一个编译器，也需要一个运行时系统来动态得创建类和对象、进行消息传递和转发。也就是说，其实 `[receiver message]` 会被编译器转化为: `objc_msgSend(receiver, selector)`，如下:
+这是OC语言代码
 
 ```
 @implementation TryClang
@@ -54,11 +55,10 @@ Objective-C 是一个动态语言，这意味着它不仅需要一个编译器�
 }
 
 ```
-使用`clang`命令:`clang -rewrite-objc MyClass.m`
+使用`clang`命令:`clang -rewrite-objc MyClass.m` 命令将 OC 代码转换成 C++ 代码，更直观的看出方法的调用过程
 
 ```
-// - (instancetype)init;
-
+// - (instancetype)init 方法
 static instancetype _I_TryClang_init(TryClang * self, SEL _cmd)
 {
     self = ((TryClang *(*)(__rw_objc_super *, SEL))(void *)objc_msgSendSuper)((__rw_objc_super){(id)self, (id)class_getSuperclass(objc_getClass("TryClang"))}, sel_registerName("init"));
@@ -69,7 +69,7 @@ static instancetype _I_TryClang_init(TryClang * self, SEL _cmd)
     }
     return self;
 }
-
+// - (void)show1 方法
 static void _I_TryClang_show1(TryClang * self, SEL _cmd)
 {
     NSLog((NSString *)&__NSConstantStringImpl__var_folders_xm_vfzbkt055yng75_3z17ycx7c0000gn_T_TryClang_f35ea0_mi_0);
